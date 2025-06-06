@@ -75,7 +75,7 @@ struct inode {
     uint32_t atime;
     uint32_t mtime;
     uint32_t ctime;
-    uint8_t reserved[8];
+    uint8_t reserved[6];
 };
 ```
 
@@ -121,15 +121,22 @@ Estas funciones estarán implementadas en el archivo `read_write_block.c`.
 #include <string.h>
 #include <errno.h>
 
-#define BLOCK_SIZE 1024
+#include "vfs.h"
 
 int read_block(const char *image_path, int block_number, void *buffer) {
     int fd = open(image_path, O_RDONLY);
     if (fd < 0) return -1;
-    if (pread(fd, buffer, BLOCK_SIZE, block_number * BLOCK_SIZE) != BLOCK_SIZE) {
+
+    if (lseek(fd, block_number * BLOCK_SIZE, SEEK_SET) < 0) {
         close(fd);
         return -1;
     }
+
+    if (read(fd, buffer, BLOCK_SIZE) != BLOCK_SIZE) {
+        close(fd);
+        return -1;
+    }
+
     close(fd);
     return 0;
 }
@@ -137,10 +144,17 @@ int read_block(const char *image_path, int block_number, void *buffer) {
 int write_block(const char *image_path, int block_number, const void *buffer) {
     int fd = open(image_path, O_WRONLY);
     if (fd < 0) return -1;
-    if (pwrite(fd, buffer, BLOCK_SIZE, block_number * BLOCK_SIZE) != BLOCK_SIZE) {
+
+    if (lseek(fd, block_number * BLOCK_SIZE, SEEK_SET) < 0) {
         close(fd);
         return -1;
     }
+
+    if (write(fd, buffer, BLOCK_SIZE) != BLOCK_SIZE) {
+        close(fd);
+        return -1;
+    }
+
     close(fd);
     return 0;
 }
